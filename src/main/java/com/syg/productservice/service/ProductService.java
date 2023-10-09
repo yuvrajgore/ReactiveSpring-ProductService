@@ -9,9 +9,13 @@ import org.springframework.data.domain.Range;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 
 @Service
 public class ProductService {
+
+    @Autowired
+    private Sinks.Many<ProductDto> sink;
 
     @Autowired
     private ProductRepository productRepository;
@@ -29,7 +33,8 @@ public class ProductService {
     public Mono<ProductDto> addProduct(Mono<ProductDto> productDtoMono){
        return productDtoMono.map(EntityDtoUtil::toEntity)
                 .flatMap(this.productRepository::insert)
-                .map(EntityDtoUtil::toDto);
+                .map(EntityDtoUtil::toDto)
+               .doOnNext(this.sink::tryEmitNext);
     }
 
     public Mono<ProductDto> updateProduct(String id, Mono<ProductDto> productDtoMono){
@@ -39,6 +44,7 @@ public class ProductService {
                         .doOnNext(e -> e.setId(id)))
                 .flatMap(this.productRepository::save)
                 .map(EntityDtoUtil::toDto);
+
     }
 
     public Mono<Void> deleteProduct(String id){
